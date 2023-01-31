@@ -159,7 +159,7 @@ M.pick_action = function(opts)
 	opts = opts or {}
 	pickers
 		.new(opts, {
-			prompt_title = "Quick Note",
+			prompt_title = "Notepad",
 			finder = finders.new_table({
 				results = commands,
 			}),
