@@ -156,7 +156,7 @@ M.pick_action = function(opts)
 
 	local commands = { "find note", "new note", "search notes", "search tags", "rename note" }
 	local funcs = { M.find_notes, M.new, M.search_notes, M.search_tags, M.rename }
-	opts = opts or {}
+	opts = opts or require("telescope.themes").get_ivy()
 	pickers
 		.new(opts, {
 			prompt_title = "Notepad",
