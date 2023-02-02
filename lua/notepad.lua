@@ -24,7 +24,7 @@ local known_headings = {
 
 local text_to_tags = function(raw_tags)
 	local tags = {}
-	for i in string.gmatch(raw_tags, "([^%s* %s*]+)") do
+	for i in string.gmatch(raw_tags, "([^%s*, %s*]+)") do
 		table.insert(tags, i)
 	end
 	return tags
