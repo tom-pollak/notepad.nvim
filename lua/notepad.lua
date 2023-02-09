@@ -4,15 +4,9 @@ M.options = {}
 
 local defaults = {
     notes_directory = os.getenv("HOME") .. "/notes",
-    file_extension = ".md"
-}
-
-local known_headings = {
-    md = {"---", "title: <TITLE>", "tags: <TAGS>", "---"},
-    org = {
-        "#+title:      <TITLE>", "#+date:       <DATE>", "#+filetags:   <TAGS>"
-    },
-    norg = {"@document.meta", "title: <TITLE>", "created: <DATE>", "@end"}
+    file_extension = ".md",
+    metadata = {"tags"},
+    enable_metadata = true
 }
 
 function table.shallow_copy(t)
@@ -21,9 +15,44 @@ function table.shallow_copy(t)
     return t2
 end
 
-M.new = function(file_extension)
+local function insert_metadata(file_data)
+    local template_data = {"---"}
+    for t, v in pairs(file_data) do
+        table.insert(template_data, t .. ": " .. v)
+    end
+    table.insert(template_data, "---")
+    vim.api.nvim_put(template_data, "l", false, true)
+end
+
+local function build_slug(title, extension)
+    local normalized_name = string.lower(title)
+    normalized_name = string.gsub(normalized_name, "%s+", "_")
+    local file_name = normalized_name .. extension
+    return file_name
+end
+
+local function open(file_data, extension)
+    local title = file_data.title
+    if title == nil then
+        print("The title is required.")
+        return
+    end
+
+    local file_name = build_slug(title, extension)
+    local file_path = M.options.notes_directory .. "/" .. file_name
+    vim.cmd("e " .. file_path)
+
+    local file_exists = vim.fn.filereadable(vim.fn.expand(file_path))
+    if file_exists == 1 then
+        print("\nFile exists, opening")
+    else
+        if M.options.enable_metadata then insert_metadata(file_data) end
+    end
+end
+
+M.new = function()
     local title = ""
-    file_extension = file_extension or M.options.file_extension
+    local file_extension = M.options.file_extension or ".md"
     vim.ui.input({prompt = "Enter title: "}, function(input) title = input end)
     if title == nil then
         print("The title is required.")
@@ -31,12 +60,14 @@ M.new = function(file_extension)
     end
     title = title.gsub(title, "%s+$", "")
 
-    local raw_tags = nil
-
-    vim.ui
-        .input({prompt = "Enter tags: "}, function(input) raw_tags = input end)
-
-    M._open(title, raw_tags, file_extension)
+    local file_data = {title = title}
+    for i, d in ipairs(M.options.metadata) do
+        local value = ""
+        vim.ui.input({prompt = "Enter " .. d .. ": "},
+                     function(input) value = input end)
+        if value ~= nil then file_data[d] = value end
+    end
+    open(file_data, file_extension)
 end
 
 M.rename = function()
@@ -47,48 +78,11 @@ M.rename = function()
         prompt = "Enter title (press enter to reuse " .. title .. "): "
     }, function(input) title = input or title end)
 
-    local new_name = M._build_slug(title, extension)
+    local new_name = build_slug(title, extension)
     new_name = M.options.notes_directory .. "/" .. new_name
     os.rename(current, new_name)
     vim.api.nvim_buf_set_name(0, new_name)
     vim.cmd("e")
-end
-
-M._open = function(title, tags, extension)
-    local file_name = M._build_slug(title, extension)
-    local file_path = M.options.notes_directory .. "/" .. file_name
-    vim.cmd("e " .. file_path)
-
-    local file_exists = vim.fn.filereadable(vim.fn.expand(file_path))
-    if file_exists == 1 then
-        print("\nFile exists, opening")
-    else
-        for ext, template in pairs(known_headings) do
-            if vim.endswith(file_name, "." .. ext) then
-                local subbed_template = table.shallow_copy(template)
-                for i, _ in ipairs(subbed_template) do
-                    subbed_template[i] =
-                        subbed_template[i]:gsub("<TITLE>", title)
-                    subbed_template[i] = subbed_template[i]:gsub("<TAGS>", tags)
-                end
-                vim.api.nvim_put(subbed_template, "l", false, true)
-                break
-            end
-        end
-    end
-end
-
-M._build_slug = function(title, extension)
-    local normalized_name = string.lower(title)
-    normalized_name = string.gsub(normalized_name, "%s+", "_")
-    local file_name = normalized_name .. extension
-    return file_name
-end
-
-M._deconstruct_slug = function(filename)
-    local title, extension = filename:match("([^-].+)(%..+)$")
-    title = title or ""
-    return title, extension
 end
 
 M.setup = function(opts)
