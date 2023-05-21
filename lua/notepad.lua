@@ -6,7 +6,8 @@ local defaults = {
     notes_directory = os.getenv("HOME") .. "/notes",
     file_extension = ".md",
     metadata = {"tags"},
-    enable_metadata = true
+    enable_metadata = true,
+    file_ignore_patterns = {".git/", ".DS_Store"}
 }
 
 function table.shallow_copy(t)
@@ -92,7 +93,8 @@ end
 M.find_notes = function()
     require("telescope.builtin").find_files({
         prompt_title = "Find note",
-        cwd = M.options.notes_directory
+        cwd = M.options.notes_directory,
+        file_ignore_patterns = M.options.file_ignore_patterns
     })
 end
 
@@ -100,7 +102,8 @@ M.search_notes = function()
     require("telescope.builtin").live_grep({
         prompt_title = "Grep notes",
         cwd = M.options.notes_directory,
-        disable_coordinates = true
+        disable_coordinates = true,
+        file_ignore_patterns = M.options.file_ignore_patterns
     })
 end
 
@@ -110,7 +113,8 @@ M.search_tags = function()
         cwd = M.options.notes_directory,
         default_text = "tags:.*",
         disable_coordinates = true,
-        use_regex = true
+        use_regex = true,
+        file_ignore_patterns = M.options.file_ignore_patterns
     })
 end
 
